@@ -1,0 +1,22 @@
+# Core Flask
+flask==3.0.2
+flask-mysqldb==1.0.1
+flask-sqlalchemy==3.1.1
+flask-migrate==4.0.5
+
+# Database
+mysql-connector-python==8.1.0
+sqlalchemy==2.0.25
+
+# Machine Learning
+lightgbm==4.1.0
+pandas==2.1.4
+scikit-learn==1.3.2
+numpy==1.26.3
+
+# API Support
+flask-cors==4.0.0
+python-dotenv==1.0.0
+
+# Production
+gunicorn==21.2.0
