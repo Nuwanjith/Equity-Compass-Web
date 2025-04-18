@@ -14,7 +14,7 @@ def create_app():
     from .routes.predictions import predictions_bp
     from .routes.fundamentals import fundamentals_bp
     
-    app.register_blueprint(predictions_bp)
-    app.register_blueprint(fundamentals_bp)
+    app.register_blueprint(predictions_bp, url_prefix='/api')
+    app.register_blueprint(fundamentals_bp, url_prefix='/api')
     
     return app
