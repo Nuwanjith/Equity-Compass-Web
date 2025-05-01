@@ -1,4 +1,4 @@
-<?php include './backend/includes/auth.php'; // Check login ?>
+<?php //include './backend/includes/auth.php'; //login ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
 <body>
-    <!-- Your dashboard content -->
+    <!-- dashboard content -->
     <script src="/assets/js/chart-config.js"></script>
 </body>
 </html>
