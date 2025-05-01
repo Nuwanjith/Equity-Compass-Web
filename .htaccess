@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Redirect to login if not authenticated
+RewriteCond %{REQUEST_URI} !^/index\.php
+RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg)$
+RewriteCond %{HTTP_COOKIE} !PHPSESSID=[^;]+
+RewriteRule ^(.*)$ /index.php [R=302,L]
+
+# Prevent directory listing
+Options -Indexes
