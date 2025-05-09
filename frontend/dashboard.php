@@ -43,84 +43,106 @@
     <script>
         // Fetch data from backend API
         async function fetchStockData() {
-    try {
-        // Use absolute path to API
-        const response = await fetch('http://localhost:8000/backend/api/stock_prices.php');
-        
-        // First check if response is OK
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            try {
+                // Use absolute path to API
+                const response = await fetch('http://localhost:8000/backend/api/stock_prices.php');
+                
+                // First check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check content type before parsing
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Invalid content type. Received: ${contentType}\nResponse: ${text.substring(0, 100)}...`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Received data:', result.data); // Debug log
+                    renderCharts(result.data);
+                } else {
+                    console.error('API returned error:', result.error);
+                    alert('Failed to load stock data: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('API request failed:', error);
+                alert('Failed to connect to server. Check console for details.');
+            }
         }
-        
-        // Check content type before parsing
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await response.text();
-            throw new Error(`Invalid content type. Received: ${contentType}\nResponse: ${text.substring(0, 100)}...`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            renderCharts(result.data);
-        } else {
-            console.error('API returned error:', result.error);
-            alert('Failed to load stock data: ' + (result.error || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('API request failed:', error);
-        alert('Failed to connect to server. Check console for details.');
-    }
-}
 
-        // Render charts with data
         function renderCharts(data) {
-            // Prepare data
-            const dates = data.map(item => new Date(item.trade_date).toLocaleDateString());
-            const closes = data.map(item => item.close_price);
-            const volumes = data.map(item => item.volume);
+            if (!data || data.length === 0) {
+                console.error('No data received or empty data array');
+                alert('No data available to display charts.');
+                return;
+            }
+
+            // Prepare monthly data - ensure we're accessing the correct properties
+            const months = data.map(item => item.month || item.Month || item.date || 'N/A');
+            const avgPrices = data.map(item => {
+                // Try different possible property names for average price
+                return item.avg_close || item.avg_price || item.close || item.average || 0;
+            });
+            const volumes = data.map(item => {
+                // Try different possible property names for volume
+                return item.total_volume || item.volume || item.trading_volume || 0;
+            });
+
+            console.log('Chart data prepared:', { months, avgPrices, volumes }); // Debug log
 
             // Price Chart
             const priceCtx = document.getElementById('priceChart').getContext('2d');
             new Chart(priceCtx, {
                 type: 'line',
                 data: {
-                    labels: dates,
+                    labels: months,
                     datasets: [{
-                        label: 'Closing Price (LKR)',
-                        data: closes,
+                        label: 'Monthly Average Closing Price (LKR)',
+                        data: avgPrices,
                         borderColor: '#4e73df',
                         backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                        pointRadius: 3,
-                        pointBackgroundColor: '#4e73df',
-                        pointBorderColor: '#4e73df',
-                        pointHoverRadius: 5,
                         borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
+                        tension: 0.3,
+                        pointRadius: 4,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
                     plugins: {
                         tooltip: {
-                            mode: 'index',
-                            intersect: false
+                            callbacks: {
+                                label: function(context) {
+                                    return `Avg: LKR ${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
                         }
                     },
                     scales: {
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        },
                         y: {
                             beginAtZero: false,
                             ticks: {
                                 callback: function(value) {
                                     return 'LKR ' + value.toFixed(2);
                                 }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Price (LKR)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Month'
                             }
                         }
                     }
@@ -132,30 +154,40 @@
             new Chart(volumeCtx, {
                 type: 'bar',
                 data: {
-                    labels: dates,
+                    labels: months,
                     datasets: [{
-                        label: 'Trading Volume',
+                        label: 'Monthly Trading Volume',
                         data: volumes,
-                        backgroundColor: 'rgba(78, 115, 223, 0.5)',
-                        borderColor: 'rgba(78, 115, 223, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
                     scales: {
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        },
                         y: {
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
-                                    return value.toLocaleString();
+                                    return (value / 1000000).toFixed(1) + 'M';
                                 }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Volume (millions)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Month'
                             }
                         }
                     }
