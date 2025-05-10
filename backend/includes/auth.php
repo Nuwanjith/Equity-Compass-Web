@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../config/db_config.php';
 
 try {
-    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $dbusername, $dbpassword);
+    $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $stmt = $conn->prepare("SELECT id FROM users WHERE id = :user_id");
     $stmt->bindParam(':user_id', $_SESSION['user_id']);
     $stmt->execute();
