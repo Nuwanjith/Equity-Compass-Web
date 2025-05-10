@@ -1,4 +1,4 @@
-<?php //include './backend/includes/auth.php'; //login ?>
+<?php include(__DIR__ . '/../backend/includes/auth.php'); ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -200,3 +200,8 @@
     </script>
 </body>
 </html>
+
+
+
+
+
