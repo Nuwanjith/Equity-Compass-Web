@@ -36,28 +36,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
+        .login-container { max-width: 400px; margin: 100px auto; padding: 20px; background: #fff; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"] { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            box-sizing: border-box;
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: #2c3e50; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #1a252f; }
+        .error { 
+            color: #dc3545; 
+            margin-bottom: 15px; 
+            text-align: center; 
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Login</h1>
-    <?php if ($error): ?>
-        <p style="color:red;"><?php echo htmlspecialchars($error); ?></p>
-    <?php endif; ?>
-    
-    <form method="POST">
-        <div>
-            <label>Username:</label>
-            <input type="text" name="username" value="<?php echo htmlspecialchars($input_username); ?>" required>
-        </div>
-        <div>
-            <label>Password:</label>
-            <input type="password" name="password" required>
-        </div>
-        <button type="submit">Login</button>
-    </form>
-    
-    <p>Test user: testuser / password</p>
+    <div class="login-container">
+        <h2>Admin Login</h2>
+        <?php if (!empty($error)): ?>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+        <form method="POST" autocomplete="off">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit">Login</button>
+        </form>
+    </div>
 </body>
 </html>
