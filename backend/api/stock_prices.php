@@ -7,7 +7,7 @@ error_reporting(E_ALL);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-// Config file path (adjust according to your structure)
+// Config file path
 $configPath = __DIR__ . '/../config/db_config.php';
 
 // Verify config file exists
@@ -15,12 +15,7 @@ if (!file_exists($configPath)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Database configuration not found',
-        'debug' => [
-            'current_directory' => __DIR__,
-            'searched_path' => $configPath,
-            'suggested_fix' => 'Adjust the path in stock_prices.php'
-        ]
+        'error' => 'Database configuration not found'
     ]);
     exit();
 }
@@ -54,15 +49,15 @@ try {
         throw new Exception("Table not found for company code: $companyCode");
     }
 
-    // Query for monthly averages
+    // Query for monthly averages (12 months historical data)
     $sql = "SELECT 
                 DATE_FORMAT(trade_date, '%Y-%m') AS month,
                 AVG(close_price) AS avg_price,
                 SUM(volume) AS total_volume
             FROM $tableName
             GROUP BY DATE_FORMAT(trade_date, '%Y-%m')
-            ORDER BY month Desc
-            Limit 12";
+            ORDER BY month DESC
+            LIMIT 12";
 
     $result = $conn->query($sql);
     
@@ -70,19 +65,56 @@ try {
         throw new Exception("Query failed: " . $conn->error);
     }
 
-    $data = [];
+    // Process historical data
+    $historicalData = [];
     while ($row = $result->fetch_assoc()) {
-        $data[] = [
+        $historicalData[] = [
             'month' => $row['month'],
             'avg_price' => round($row['avg_price'], 2),
-            'volume' => (int)$row['total_volume']
+            'volume' => (int)$row['total_volume'],
+            'type' => 'historical'
         ];
     }
+
+    // Get prediction value
+    $predictionQuery = "SELECT 
+                        DATE_FORMAT(date, '%Y-%m') AS month,
+                        ensembled_prediction AS avg_price
+                      FROM Equity_compass_poc.daily_predictions
+                      WHERE company_code = ?
+                      ORDER BY date DESC
+                      LIMIT 1";
+
+    $stmt = $conn->prepare($predictionQuery);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+    
+    $stmt->bind_param("s", $companyCode);
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+    
+    $predictionResult = $stmt->get_result();
+    $predictionData = [];
+    
+    if ($predictionResult && $predictionResult->num_rows > 0) {
+        $predictionRow = $predictionResult->fetch_assoc();
+        $predictionData = [
+            'month' => $predictionRow['month'],
+            'avg_price' => round($predictionRow['avg_price'], 2),
+            'volume' => null,
+            'type' => 'prediction'
+        ];
+    }
+
+    // Combine data
+    $combinedData = array_merge($historicalData, [$predictionData]);
 
     // Successful response
     echo json_encode([
         'success' => true,
-        'data' => $data,
+        'data' => $combinedData,
         'company' => $companyCode
     ]);
 
