@@ -52,12 +52,13 @@ try {
     // Query for monthly averages (12 months historical data)
     $sql = "SELECT 
                 DATE_FORMAT(trade_date, '%Y-%m') AS month,
+                DATE_FORMAT(trade_date, '%Y-%m') AS sort_key,
                 AVG(close_price) AS avg_price,
                 SUM(volume) AS total_volume
             FROM $tableName
+            WHERE trade_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
             GROUP BY DATE_FORMAT(trade_date, '%Y-%m')
-            ORDER BY month DESC
-            LIMIT 12";
+            ORDER BY sort_key ASC";
 
     $result = $conn->query($sql);
     
@@ -72,13 +73,15 @@ try {
             'month' => $row['month'],
             'avg_price' => round($row['avg_price'], 2),
             'volume' => (int)$row['total_volume'],
-            'type' => 'historical'
+            'type' => 'historical',
+            'sort_key' => $row['sort_key']
         ];
     }
 
     // Get prediction value
     $predictionQuery = "SELECT 
                         DATE_FORMAT(date, '%Y-%m') AS month,
+                        DATE_FORMAT(date, '%Y-%m') AS sort_key,
                         ensembled_prediction AS avg_price
                       FROM Equity_compass_poc.daily_predictions
                       WHERE company_code = ?
@@ -96,7 +99,7 @@ try {
     }
     
     $predictionResult = $stmt->get_result();
-    $predictionData = [];
+    $predictionData = null;
     
     if ($predictionResult && $predictionResult->num_rows > 0) {
         $predictionRow = $predictionResult->fetch_assoc();
@@ -104,18 +107,35 @@ try {
             'month' => $predictionRow['month'],
             'avg_price' => round($predictionRow['avg_price'], 2),
             'volume' => null,
-            'type' => 'prediction'
+            'type' => 'prediction',
+            'sort_key' => $predictionRow['sort_key']
         ];
     }
 
-    // Combine data
-    $combinedData = array_merge($historicalData, [$predictionData]);
+    // Combine all data
+    $allData = $historicalData;
+    if ($predictionData) {
+        $allData[] = $predictionData;
+    }
+
+    // Sort all data chronologically
+    usort($allData, function($a, $b) {
+        return strcmp($a['sort_key'], $b['sort_key']);
+    });
+
+    // Format month display (e.g., "May 2025" instead of "2025-05")
+    $formattedData = array_map(function($item) {
+        $date = DateTime::createFromFormat('Y-m', $item['month']);
+        $item['month_display'] = $date->format('M Y'); // e.g., "Jun 2025"
+        return $item;
+    }, $allData);
 
     // Successful response
     echo json_encode([
         'success' => true,
-        'data' => $combinedData,
-        'company' => $companyCode
+        'data' => $formattedData,
+        'company' => $companyCode,
+        'time_generated' => date('Y-m-d H:i:s')
     ]);
 
 } catch (Exception $e) {
@@ -123,7 +143,8 @@ try {
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage(),
-        'company' => isset($companyCode) ? $companyCode : null
+        'company' => isset($companyCode) ? $companyCode : null,
+        'time_generated' => date('Y-m-d H:i:s')
     ]);
 } finally {
     if (isset($conn)) {
