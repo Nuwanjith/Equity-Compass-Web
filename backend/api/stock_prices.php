@@ -36,12 +36,30 @@ try {
         throw new Exception("Connection failed: " . $conn->connect_error);
     }
 
+    // Get company code from query parameter
+    $companyCode = isset($_GET['company']) ? strtoupper($_GET['company']) : 'TYRE';
+    
+    // Validate company code
+    $validCompanies = ['KCAB', 'TYRE', 'SAMP'];
+    if (!in_array($companyCode, $validCompanies)) {
+        throw new Exception("Invalid company code. Allowed values: KCAB, TYRE, SAMP");
+    }
+
+    // Determine table name based on company code
+    $tableName = $companyCode . '_stock_prices';
+
+    // Check if table exists
+    $checkTable = $conn->query("SHOW TABLES LIKE '$tableName'");
+    if ($checkTable->num_rows == 0) {
+        throw new Exception("Table not found for company code: $companyCode");
+    }
+
     // Query for monthly averages
     $sql = "SELECT 
                 DATE_FORMAT(trade_date, '%Y-%m') AS month,
                 AVG(close_price) AS avg_price,
                 SUM(volume) AS total_volume
-            FROM kelani_tyre_stock_prices
+            FROM $tableName
             GROUP BY DATE_FORMAT(trade_date, '%Y-%m')
             ORDER BY month";
 
@@ -63,14 +81,16 @@ try {
     // Successful response
     echo json_encode([
         'success' => true,
-        'data' => $data
+        'data' => $data,
+        'company' => $companyCode
     ]);
 
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => $e->getMessage(),
+        'company' => isset($companyCode) ? $companyCode : null
     ]);
 } finally {
     if (isset($conn)) {
