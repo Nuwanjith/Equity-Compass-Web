@@ -61,7 +61,8 @@ try {
                 SUM(volume) AS total_volume
             FROM $tableName
             GROUP BY DATE_FORMAT(trade_date, '%Y-%m')
-            ORDER BY month";
+            ORDER BY month Desc
+            Limit 12";
 
     $result = $conn->query($sql);
     
