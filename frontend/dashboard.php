@@ -241,7 +241,7 @@
     <!-- Sidebar Navigation -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h3>Stock Analytics</h3>
+            <h3>Equity Compass</h3>
         </div>
         
         <div class="company-selector">
@@ -474,28 +474,6 @@
                                 }
                             }
                         },
-                        annotation: {
-                            annotations: {
-                                predictedNote: {
-                                    type: 'label',
-                                    content: ['Predicted Value'],
-                                    position: {
-                                        x: 'end',
-                                        y: 'end'
-                                    },
-                                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                                    color: '#fff',
-                                    font: {
-                                        size: 12,
-                                        weight: 'bold'
-                                    },
-                                    xAdjust: -10,
-                                    yAdjust: -20,
-                                    borderRadius: 4,
-                                    padding: 8
-                                }
-                            }
-                        }
                     },
                     scales: {
                         x: {
