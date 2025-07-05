@@ -1,61 +1,76 @@
 <?php
-// Config file path
-$configPath = __DIR__ . '/../config/db_config.php';
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
 
-// Verify config file exists
-if (!file_exists($configPath)) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Database configuration not found'
-    ]);
-    exit();
-}
-
-require_once $configPath;
+// Database configuration
+require_once __DIR__ . '/../config/db_config.php';
 
 try {
     $conn = new mysqli($servername, $username, $password, $dbname);
     
-    // Validate company code (same as original)
+    if ($conn->connect_error) {
+        throw new Exception("Connection failed: " . $conn->connect_error);
+    }
+
+    // Get and sanitize company parameter
+    $companyCode = isset($_GET['company']) ? $conn->real_escape_string(strtoupper($_GET['company'])) : 'TYRE';
     
-    // Query valuation metrics
-    $sql = "SELECT 
-                valuation_date,
-                pe_ratio,
-                pb_ratio,
-                dividend_yield,
-                ev_ebitda
-            FROM company_valuations
-            WHERE company_code = ?
-            ORDER BY valuation_date DESC
-            LIMIT 12"; // Last 12 valuations
+    // Prepare statement
+    $stmt = $conn->prepare("
+        SELECT 
+            `quarter`,
+            `company`,
+            `NAV-Based-valuation` AS nav_valuation,
+            `EPS-Based-valuation` AS eps_valuation,
+            `Graham-Number-valuation` AS graham_valuation,
+            `created_at`
+        FROM `valuations`
+        WHERE `company` = ?
+        ORDER BY `created_at` DESC
+        LIMIT 1
+    ");
     
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $companyCode);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    $valuations = [];
-    while ($row = $result->fetch_assoc()) {
-        $valuations[] = [
-            'date' => $row['valuation_date'],
-            'pe_ratio' => round($row['pe_ratio'], 2),
-            'pb_ratio' => round($row['pb_ratio'], 2),
-            'dividend_yield' => round($row['dividend_yield'], 4),
-            'ev_ebitda' => round($row['ev_ebitda'], 2)
-        ];
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
     }
     
-    // Successful response
+    // Bind parameters and execute
+    $stmt->bind_param("s", $companyCode);
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+    
+    $result = $stmt->get_result();
+    $data = $result->fetch_assoc();
+    
+    if ($data) {
+        // Success response with data
+        echo json_encode([
+            'success' => true,
+            'data' => $data,
+            'company' => $companyCode,
+            'time_generated' => date('Y-m-d H:i:s')
+        ], JSON_NUMERIC_CHECK);
+    } else {
+        // No data found for company
+        echo json_encode([
+            'success' => false,
+            'error' => "No valuation data found for company: $companyCode",
+            'company' => $companyCode,
+            'time_generated' => date('Y-m-d H:i:s')
+        ]);
+    }
+    
+} catch (Exception $e) {
+    // Error response
+    http_response_code(500);
     echo json_encode([
-        'success' => true,
-        'data' => $valuations,
-        'company' => $companyCode,
+        'success' => false,
+        'error' => $e->getMessage(),
+        'company' => isset($companyCode) ? $companyCode : null,
         'time_generated' => date('Y-m-d H:i:s')
     ]);
-
-} catch (Exception $e) {
-    // [Same error handling as original]
+} finally {
+    if (isset($conn)) $conn->close();
 }
 ?>
