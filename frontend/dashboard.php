@@ -271,59 +271,99 @@
                 });
             });
             
-            // Initialize the valuation chart
-            function loadAnalysisData() {
-                const ctx = document.getElementById('valuationChart').getContext('2d');
-                const valuationChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Current Price', 'Intrinsic Value', '52-Week High', '52-Week Low'],
-                        datasets: [{
-                            label: 'Price Comparison (LKR)',
-                            data: [45.2, 52.75, 58.3, 38.1],
-                            backgroundColor: [
-                                'rgba(54, 162, 235, 0.7)',
-                                'rgba(75, 192, 192, 0.7)',
-                                'rgba(255, 99, 132, 0.7)',
-                                'rgba(255, 159, 64, 0.7)'
-                            ],
-                            borderColor: [
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(75, 192, 192, 1)',
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(255, 159, 64, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                title: {
-                                    display: true,
-                                    text: 'Price (LKR)'
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Price Valuation Comparison'
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.parsed.y.toFixed(2) + ' LKR';
-                                    }
-                                }
-                            }
+        });
+async function fetchStockDataAndUpdate() {
+    try {
+        const response = await fetch('http://localhost:8000/backend/api/stock_prices.php?company=TYRE');
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+            // Filter only historical entries
+            const historicalData = result.data.filter(entry => entry.type === 'historical');
+
+            if (historicalData.length > 0) {
+                // Find the most recent historical record (based on sort_key)
+                const latest = historicalData.reduce((a, b) =>
+                    a.sort_key > b.sort_key ? a : b
+                );
+
+                const currentPrice = latest.avg_price;
+                updateCurrentPrice(currentPrice);
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching stock data:', error);
+    }
+}
+
+function updateCurrentPrice(price) {
+    // Update the DOM value
+    const priceElement = document.getElementById('current-price');
+    priceElement.textContent = `LKR ${price.toFixed(2)}`;
+
+    // Update chart if needed
+    if (valuationChart) {
+        valuationChart.data.datasets[0].data[0] = price;
+        valuationChart.update();
+    }
+}
+
+let valuationChart;
+
+function loadAnalysisData() {
+    const ctx = document.getElementById('valuationChart').getContext('2d');
+    valuationChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Current Price', 'Intrinsic Value', '52-Week High', '52-Week Low'],
+            datasets: [{
+                label: 'Price Comparison (LKR)',
+                data: [0, 52.75, 58.3, 38.1], // Placeholder, first value will be replaced
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(255, 159, 64, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Price (LKR)'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Price Valuation Comparison'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y.toFixed(2) + ' LKR';
                         }
                     }
-                });
+                }
             }
-        });
+        }
+    });
+
+    // Fetch current price from API and update
+    fetchStockDataAndUpdate();
+}
     </script>
 </body>
 </html>
