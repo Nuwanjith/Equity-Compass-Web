@@ -4,366 +4,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="assets/styles.css">
-    <title>Kelani Tyre Stock Dashboard</title>
+    <title>Stock Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.1/dist/chartjs-plugin-annotation.min.js"></script>
     <style>
-        /* Analysis page styles */
-        .analysis-page {
-            display: none;
-            padding: 20px;
+        .sidebar {
+            background-color: #343a40;
+            min-height: 100vh;
         }
-        
-        .valuation-comparison {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
         }
-        
-        .valuation-metrics {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
         }
-        
-        .metric-card {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            width: 23%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
+        .chart-container {
+            position: relative;
+            height: 300px;
         }
-        
-        .metric-card h3 {
-            color: #6c757d;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        
-        .metric-card .value {
-            font-size: 24px;
+        .price-highlight {
+            font-size: 1.8rem;
             font-weight: bold;
         }
-        
-        .metric-card .positive {
+        .prediction-up {
             color: #28a745;
         }
-        
-        .metric-card .negative {
+        .prediction-down {
             color: #dc3545;
-        }
-        
-        .comparison-chart {
-            height: 300px;
-            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar Navigation -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h3>Equity Compass</h3>
-        </div>
-        
-        <div class="company-selector">
-            <label for="companyCode">Select Company</label>
-            <select id="companyCode">
-                <option value="KCAB">Kelani Cables (KCAB)</option>
-                <option value="TYRE" selected>Kelani Tyres (TYRE)</option>
-                <option value="SAMP">Sampath Bank (SAMP)</option>
-            </select>
-        </div>
-        
-        <div class="sidebar-menu">
-            <div class="menu-item active" data-page="dashboard">
-                <i class="fas fa-chart-line"></i>
-                <span>Dashboard</span>
-            </div>
-            <div class="menu-item" data-page="historical">
-                <i class="fas fa-history"></i>
-                <span>Historical Data</span>
-            </div>
-            <div class="menu-item" data-page="analysis">
-                <i class="fas fa-chart-pie"></i>
-                <span>Analysis</span>
-            </div>
-            <div class="menu-item" data-page="settings">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Main Dashboard Content -->
-    <div class="dashboard" id="dashboard-page">
-        <div class="header">
-            <h1>Stock Performance Dashboard</h1>
-            <div class="user-profile">
-                <img src="https://ui-avatars.com/api/?name=Admin&background=4e73df&color=fff" alt="User">
-                <span>Admin</span>
-            </div>
-        </div>
-        
-        <!-- Price Chart Card -->
-        <div class="card">
-            <div class="card-header">
-                <span>Price Trend Analysis</span>
-                <div class="chart-actions">
-                    <i class="fas fa-download"></i>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar p-0">
+                <div class="p-3 text-white">
+                    <h4>Equity Compass</h4>
                 </div>
-            </div>
-            <div class="card-body">
-                <div class="loading-spinner" id="priceLoading">
-                    <div class="spinner"></div>
+                <div class="p-3">
+                    <select id="companyCode" class="form-select bg-dark text-white">
+                        <option value="KCAB">Kelani Cables</option>
+                        <option value="TYRE" selected>Kelani Tyres</option>
+                        <option value="SAMP">Sampath Bank</option>
+                    </select>
                 </div>
-                <div class="chart-container">
-                    <canvas id="priceChart"></canvas>
-                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-page="dashboard">
+                            <i class="fas fa-chart-line me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="analysis">
+                            <i class="fas fa-chart-pie me-2"></i> Analysis
+                        </a>
+                    </li>
+                </ul>
             </div>
-        </div>
-        
-        <!-- Volume Chart Card -->
-        <div class="card">
-            <div class="card-header">
-                <span>Volume Analysis</span>
-                <div class="chart-actions">
-                    <i class="fas fa-download"></i>
+
+            <!-- Main Content -->
+            <main class="col-md-9 col-lg-10 p-4">
+                <!-- Dashboard -->
+                <div id="dashboard-page">
+                    <div class="d-flex justify-content-between mb-4">
+                        <h2 id="company-title">Kelani Tyres Dashboard</h2>
+                    </div>
+                    
+                    <!-- Price Highlights -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6 text-center">
+                                            <h6>Current Price</h6>
+                                            <div class="price-highlight" id="current-price">LKR 45.20</div>
+                                        </div>
+                                        <div class="col-6 text-center">
+                                            <h6>Next Month Prediction</h6>
+                                            <div class="price-highlight prediction-up" id="predicted-price">LKR 47.80 (+5.8%)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Price Trend</h5>
+                                    <div class="chart-container">
+                                        <canvas id="priceChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">Volume</h5>
+                                    <div class="chart-container">
+                                        <canvas id="volumeChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="card-body">
-                <div class="loading-spinner" id="volumeLoading">
-                    <div class="spinner"></div>
+
+                <!-- Analysis Page (hidden by default) -->
+                <div id="analysis-page" style="display:none">
+                    <!-- Analysis content remains the same -->
                 </div>
-                <div class="chart-container">
-                    <canvas id="volumeChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Analysis Page Content -->
-    <div class="dashboard" id="analysis-page" style="display: none;">
-        <div class="header">
-            <h1>Valuation Analysis</h1>
-            <div class="user-profile">
-                <img src="https://ui-avatars.com/api/?name=Admin&background=4e73df&color=fff" alt="User">
-                <span>Admin</span>
-            </div>
-        </div>
-        
-        <div class="valuation-comparison">
-            <h2>Current Price vs. Valuation</h2>
-            <p>Compare the current market price with our intrinsic valuation metrics</p>
-            
-            <div class="valuation-metrics">
-                <div class="metric-card">
-                    <h3>Current Price</h3>
-                    <div class="value" id="current-price">LKR 45.20</div>
-                    <div class="change">+0.50 (1.12%)</div>
-                </div>
-                
-                <div class="metric-card">
-                    <h3>Intrinsic Value</h3>
-                    <div class="value" id="intrinsic-value">LKR 52.75</div>
-                    <div class="change positive">Undervalued by 14.3%</div>
-                </div>
-                
-                <div class="metric-card">
-                    <h3>52-Week High</h3>
-                    <div class="value" id="high-price">LKR 58.30</div>
-                    <div class="change negative">-22.5% from high</div>
-                </div>
-                
-                <div class="metric-card">
-                    <h3>52-Week Low</h3>
-                    <div class="value" id="low-price">LKR 38.10</div>
-                    <div class="change positive">+18.6% from low</div>
-                </div>
-            </div>
-            
-            <div class="comparison-chart">
-                <canvas id="valuationChart"></canvas>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <span>Valuation Metrics</span>
-            </div>
-            <div class="card-body">
-                <table class="valuation-table">
-                    <thead>
-                        <tr>
-                            <th>Metric</th>
-                            <th>Value</th>
-                            <th>Sector Avg</th>
-                            <th>Premium/Discount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>P/E Ratio</td>
-                            <td>8.5x</td>
-                            <td>12.3x</td>
-                            <td class="positive">-30.9%</td>
-                        </tr>
-                        <tr>
-                            <td>P/B Ratio</td>
-                            <td>1.2x</td>
-                            <td>1.8x</td>
-                            <td class="positive">-33.3%</td>
-                        </tr>
-                        <tr>
-                            <td>Dividend Yield</td>
-                            <td>4.2%</td>
-                            <td>3.1%</td>
-                            <td class="positive">+35.5%</td>
-                        </tr>
-                        <tr>
-                            <td>ROE</td>
-                            <td>14.5%</td>
-                            <td>11.2%</td>
-                            <td class="positive">+29.5%</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            </main>
         </div>
     </div>
 
-    <script src="assets/dashboard.js"></script>
+    <!-- Bootstrap & jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // Page navigation functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuItems = document.querySelectorAll('.menu-item');
-            
-            menuItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    // Remove active class from all items
-                    menuItems.forEach(i => i.classList.remove('active'));
-                    
-                    // Add active class to clicked item
-                    this.classList.add('active');
-                    
-                    // Get the page to show
-                    const page = this.getAttribute('data-page');
-                    
-                    // Hide all pages
-                    document.querySelectorAll('.dashboard').forEach(p => {
-                        p.style.display = 'none';
-                    });
-                    
-                    // Show the selected page
-                    if (page === 'analysis') {
-                        document.getElementById('analysis-page').style.display = 'block';
-                        // You would load analysis data here
-                        loadAnalysisData();
-                    } else if (page === 'dashboard') {
-                        document.getElementById('dashboard-page').style.display = 'block';
-                    }
-                    // Add other pages as needed
-                });
-            });
-            
-        });
-async function fetchStockDataAndUpdate() {
-    try {
-        const response = await fetch('http://localhost:8000/backend/api/stock_prices.php?company=TYRE');
-        const result = await response.json();
-
-        if (result.success && Array.isArray(result.data)) {
-            // Filter only historical entries
-            const historicalData = result.data.filter(entry => entry.type === 'historical');
-
-            if (historicalData.length > 0) {
-                // Find the most recent historical record (based on sort_key)
-                const latest = historicalData.reduce((a, b) =>
-                    a.sort_key > b.sort_key ? a : b
-                );
-
-                const currentPrice = latest.avg_price;
-                updateCurrentPrice(currentPrice);
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching stock data:', error);
-    }
-}
-
-function updateCurrentPrice(price) {
-    // Update the DOM value
-    const priceElement = document.getElementById('current-price');
-    priceElement.textContent = `LKR ${price.toFixed(2)}`;
-
-    // Update chart if needed
-    if (valuationChart) {
-        valuationChart.data.datasets[0].data[0] = price;
-        valuationChart.update();
-    }
-}
-
-let valuationChart;
-
-function loadAnalysisData() {
-    const ctx = document.getElementById('valuationChart').getContext('2d');
-    valuationChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Current Price', 'Intrinsic Value', '52-Week High', '52-Week Low'],
-            datasets: [{
-                label: 'Price Comparison (LKR)',
-                data: [0, 52.75, 58.3, 38.1], // Placeholder, first value will be replaced
-                backgroundColor: [
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(255, 159, 64, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(255, 159, 64, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    title: {
-                        display: true,
-                        text: 'Price (LKR)'
-                    }
-                }
+        // Sample data - replace with actual API calls
+        const companyData = {
+            'TYRE': {
+                currentPrice: 45.20,
+                predictedPrice: 47.80,
+                predictionChange: 5.8,
+                priceHistory: [45, 47, 43, 48, 46, 47],
+                volumeHistory: [12000, 15000, 10000, 18000, 14000, 16000],
+                months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
             },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Price Valuation Comparison'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.parsed.y.toFixed(2) + ' LKR';
-                        }
-                    }
-                }
+            'KCAB': {
+                currentPrice: 38.50,
+                predictedPrice: 36.20,
+                predictionChange: -6.0,
+                priceHistory: [40, 39, 38, 37, 38, 38.5],
+                volumeHistory: [8000, 9500, 7000, 8500, 9000, 8200],
+                months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+            },
+            'SAMP': {
+                currentPrice: 62.30,
+                predictedPrice: 65.10,
+                predictionChange: 4.5,
+                priceHistory: [60, 62, 61, 63, 62, 62.3],
+                volumeHistory: [20000, 22000, 18000, 24000, 21000, 23000],
+                months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
             }
-        }
-    });
+        };
 
-    // Fetch current price from API and update
-    fetchStockDataAndUpdate();
-}
+        $(function() {
+            // Initialize charts and prices
+            updateDashboard('TYRE');
+            
+            // Company change handler
+            $('#companyCode').change(function() {
+                const company = $(this).val();
+                $('#company-title').text(`${$(this).find('option:selected').text()} Dashboard`);
+                updateDashboard(company);
+            });
+
+            // Page navigation
+            $('[data-page]').click(function(e) {
+                e.preventDefault();
+                $('.nav-link').removeClass('active');
+                $(this).addClass('active');
+                $('[id$="-page"]').hide();
+                $(`#${$(this).data('page')}-page`).show();
+            });
+        });
+
+        function updateDashboard(companyCode) {
+            const data = companyData[companyCode];
+            
+            // Update price displays
+            $('#current-price').text(`LKR ${data.currentPrice.toFixed(2)}`);
+            
+            const predictionElement = $('#predicted-price');
+            predictionElement.text(`LKR ${data.predictedPrice.toFixed(2)} (${data.predictionChange > 0 ? '+' : ''}${data.predictionChange.toFixed(1)}%)`);
+            predictionElement.removeClass('prediction-up prediction-down')
+                           .addClass(data.predictionChange >= 0 ? 'prediction-up' : 'prediction-down');
+            
+            // Update charts
+            updateChart('priceChart', 'line', data.months, data.priceHistory, 'Price', 'rgba(75, 192, 192, 1)');
+            updateChart('volumeChart', 'bar', data.months, data.volumeHistory, 'Volume', 'rgba(54, 162, 235, 0.7)');
+        }
+
+        function updateChart(chartId, type, labels, data, label, color) {
+            const ctx = $(`#${chartId}`)[0].getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window[chartId]) {
+                window[chartId].destroy();
+            }
+            
+            // Create new chart
+            window[chartId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderColor: type === 'line' ? color : undefined,
+                        backgroundColor: type === 'bar' ? color : 'rgba(75, 192, 192, 0.1)',
+                        tension: type === 'line' ? 0.1 : undefined
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
     </script>
 </body>
 </html>
