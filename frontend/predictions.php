@@ -1,4 +1,5 @@
 <?php
+include(__DIR__ . '/../backend/includes/auth.php');
 $companies = ["ABC Corp", "XYZ Ltd", "Kelani Tyres"];
 $selectedCompany = $_GET['company'] ?? $companies[0];
 ?>
@@ -8,7 +9,23 @@ $selectedCompany = $_GET['company'] ?? $companies[0];
     <meta charset="UTF-8">
     <title>Predictions - <?php echo htmlspecialchars($selectedCompany); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+            color: white;
+        }
+    </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -18,15 +35,26 @@ $selectedCompany = $_GET['company'] ?? $companies[0];
             <a class="nav-link" href="analysis.php?company=<?php echo urlencode($selectedCompany); ?>">Analysis</a>
             <a class="nav-link active" href="predictions.php?company=<?php echo urlencode($selectedCompany); ?>">Predictions</a>
         </div>
-        <form class="d-flex">
-            <select class="form-select" onchange="location = this.value;">
-                <?php foreach ($companies as $company): ?>
-                    <option value="?company=<?php echo urlencode($company); ?>" <?php echo ($company === $selectedCompany) ? 'selected' : ''; ?>>
-                        <?php echo $company; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </form>
+        <div class="d-flex align-items-center">
+            <!-- Company Selector (now on the left) -->
+            <form class="d-flex me-3"> <!-- Added me-3 for right margin -->
+                <select class="form-select" onchange="location = this.value;">
+                    <?php foreach ($companies as $company): ?>
+                        <option value="?company=<?php echo urlencode($company); ?>" <?php echo ($company === $selectedCompany) ? 'selected' : ''; ?>>
+                            <?php echo $company; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            
+            <!-- User Info (now on the right) -->
+            <?php if (isset($_SESSION['username'])): ?>
+                <div class="user-info">
+                    <img src="../assets/images/avatar.png" alt="User Avatar" class="user-avatar">
+                    <span><?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 </nav>
 

@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Valid login - set session
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                header('Location: /frontend/dashboard.php');
+                header('Location: /frontend/predictions.php');
                 exit;
             }
         }

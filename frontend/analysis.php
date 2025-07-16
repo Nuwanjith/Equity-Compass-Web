@@ -17,15 +17,26 @@ $selectedCompany = $_GET['company'] ?? $companies[0];
             <a class="nav-link active" href="analysis.php?company=<?php echo urlencode($selectedCompany); ?>">Analysis</a>
             <a class="nav-link" href="predictions.php?company=<?php echo urlencode($selectedCompany); ?>">Predictions</a>
         </div>
-        <form class="d-flex">
-            <select class="form-select" onchange="location = this.value;">
-                <?php foreach ($companies as $company): ?>
-                    <option value="?company=<?php echo urlencode($company); ?>" <?php echo ($company === $selectedCompany) ? 'selected' : ''; ?>>
-                        <?php echo $company; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </form>
+        <div class="d-flex align-items-center">
+            <!-- Company Selector (now on the left) -->
+            <form class="d-flex me-3"> <!-- Added me-3 for right margin -->
+                <select class="form-select" onchange="location = this.value;">
+                    <?php foreach ($companies as $company): ?>
+                        <option value="?company=<?php echo urlencode($company); ?>" <?php echo ($company === $selectedCompany) ? 'selected' : ''; ?>>
+                            <?php echo $company; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            
+            <!-- User Info (now on the right) -->
+            <?php if (isset($_SESSION['username'])): ?>
+                <div class="user-info">
+                    <img src="../assets/images/avatar.png" alt="User Avatar" class="user-avatar">
+                    <span><?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 </nav>
 
