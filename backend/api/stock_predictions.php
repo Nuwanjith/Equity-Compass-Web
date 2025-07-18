@@ -21,16 +21,19 @@ try {
         throw new Exception("Invalid company code. Allowed values: KCAB, TYRE, SAMP");
     }
 
-    // Prepare statement to get 30 most recent predictions (only ensemble)
+    // Prepare statement to get predictions grouped by month
     $stmt = $conn->prepare("
         SELECT 
-            `date` AS prediction_date,
-            `ensembled_prediction` AS price,
-            `created_at`
+            DATE_FORMAT(`date`, '%Y-%m') AS month,
+            AVG(`ensembled_prediction`) AS avg_price,
+            COUNT(*) AS volume,
+            DATE_FORMAT(`date`, '%Y-%m') AS sort_key,
+            DATE_FORMAT(`date`, '%b %Y') AS month_display
         FROM `daily_predictions`
         WHERE `company_code` = ? AND `ensembled_prediction` IS NOT NULL
-        ORDER BY `date` ASC
-        LIMIT 30
+        GROUP BY DATE_FORMAT(`date`, '%Y-%m'), DATE_FORMAT(`date`, '%b %Y')
+        ORDER BY sort_key ASC
+        LIMIT 12
     ");
     
     if (!$stmt) {
@@ -48,14 +51,17 @@ try {
     
     while ($row = $result->fetch_assoc()) {
         $predictions[] = [
-            'date' => $row['prediction_date'],
-            'price' => round($row['price'], 2),
-            'created_at' => $row['created_at']
+            'month' => $row['month'],
+            'avg_price' => round($row['avg_price'], 2),
+            'volume' => (int)$row['volume'],
+            'type' => 'prediction',
+            'sort_key' => $row['sort_key'],
+            'month_display' => $row['month_display']
         ];
     }
     
     if (!empty($predictions)) {
-        // Success response with all predictions
+        // Success response with monthly predictions
         echo json_encode([
             'success' => true,
             'data' => $predictions,
