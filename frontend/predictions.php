@@ -1,6 +1,6 @@
 <?php
 include(__DIR__ . '/../backend/includes/auth.php');
-$companies = ["SAMP", "KCAB", "TYRE"];
+$companies = ["TYRE", "SAMP", "KCAB", "DIPD"];
 $selectedCompany = $_GET['company'] ?? $companies[0];
 ?>
 <!DOCTYPE html>
