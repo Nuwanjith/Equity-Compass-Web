@@ -38,7 +38,7 @@ $selectedCompany = $_GET['company'] ?? $companies[0];
             </select>
             <?php if (isset($_SESSION['username'])): ?>
                 <div class="user-info">
-                    <img src="../assets/images/avatar.png" alt="Avatar" class="user-avatar">
+                    <img src="./assets/images/avatar.png" alt="Avatar" class="user-avatar">
                     <span><?= htmlspecialchars($_SESSION['username']) ?></span>
                 </div>
             <?php endif; ?>
