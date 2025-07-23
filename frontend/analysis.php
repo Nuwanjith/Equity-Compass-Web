@@ -1,30 +1,25 @@
 <?php
-session_start(); // Added to ensure session variables are available
+include(__DIR__ . '/../backend/includes/auth.php');
 $companies = ["TYRE", "SAMP", "KCAB", "DIPD"];
 $selectedCompany = $_GET['company'] ?? $companies[0];
-$valuationData = [
-    ['metric' => 'Current Market Price', 'value' => 145.00, 'remarks' => 'Latest closing price'],
-    ['metric' => 'Net Asset Value (NAV)', 'value' => 130.00, 'remarks' => 'From financial report'],
-    ['metric' => 'Graham Number', 'value' => 160.45, 'remarks' => '√(22.5 × EPS × BVPS)'],
-    ['metric' => 'P/B Ratio', 'value' => 1.12, 'remarks' => 'Price / Book Value'],
-    ['metric' => 'Predicted Price', 'value' => 150.75, 'remarks' => 'Next month forecast', 'highlight' => true]
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Analysis - <?=htmlspecialchars($selectedCompany)?></title>
+    <title>Analysis - <?= htmlspecialchars($selectedCompany) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-right: 8px;
+        .user-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; margin-right:10px; }
+        .user-info { display:flex; align-items:center; margin-right:15px; color:white; }
+        .loading-spinner {
+            display:inline-block; width:20px; height:20px; border:3px solid rgba(0,0,0,.1);
+            border-radius:50%; border-top-color:#007bff; animation:spin 1s ease-in-out infinite; margin-left:10px;
         }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .valuation-table { margin-top:30px; }
+        .valuation-table th { background-color:#f8f9fa; }
     </style>
 </head>
 <body>
@@ -32,23 +27,21 @@ $valuationData = [
     <div class="container-fluid">
         <a class="navbar-brand" href="#">Dashboard</a>
         <div class="navbar-nav me-auto">
-            <a class="nav-link active" href="analysis.php?company=<?=urlencode($selectedCompany)?>">Analysis</a>
-            <a class="nav-link" href="predictions.php?company=<?=urlencode($selectedCompany)?>">Predictions</a>
+            <a class="nav-link active" href="analysis.php?company=<?= urlencode($selectedCompany) ?>">Analysis</a>
+            <a class="nav-link" href="predictions.php?company=<?= urlencode($selectedCompany) ?>">Predictions</a>
         </div>
         <div class="d-flex align-items-center">
-            <form class="d-flex me-3">
-                <select class="form-select" onchange="location = this.value;">
-                    <?php foreach ($companies as $company): ?>
-                        <option value="?company=<?=urlencode($company)?>" <?=$company === $selectedCompany ? 'selected' : ''?>>
-                            <?=$company?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+            <select class="form-select me-3" onchange="location='?company='+encodeURIComponent(this.value)">
+                <?php foreach ($companies as $company): ?>
+                    <option value="<?= htmlspecialchars($company) ?>" <?= $company === $selectedCompany ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($company) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
             <?php if (isset($_SESSION['username'])): ?>
-                <div class="d-flex align-items-center text-white">
-                    <img src="./assets/images/avatar.png" alt="User Avatar" class="user-avatar">
-                    <span><?=htmlspecialchars($_SESSION['username'])?></span>
+                <div class="user-info">
+                    <img src="./assets/images/avatar.png" alt="Avatar" class="user-avatar">
+                    <span><?= htmlspecialchars($_SESSION['username']) ?></span>
                 </div>
             <?php endif; ?>
         </div>
@@ -56,53 +49,137 @@ $valuationData = [
 </nav>
 
 <div class="container mt-5">
-    <h2 class="mb-4">Valuation for <strong><?=htmlspecialchars($selectedCompany)?></strong></h2>
-
-    <div class="card mb-4">
-        <div class="card-body p-3">
-            <canvas id="valuationChart" height="120"></canvas>
+    <h2>Valuation Analysis for <strong id="companyName"><?= htmlspecialchars($selectedCompany) ?></strong> 
+        <span id="loadingIndicator" class="loading-spinner" style="display:none"></span></h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <canvas id="valuationChart" width="600" height="400"></canvas>
+        </div>
+        <div class="col-md-4">
+            <table class="table table-bordered valuation-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value ($)</th>
+                    </tr>
+                </thead>
+                <tbody id="valuationTableBody">
+                    <tr>
+                        <td>NAV Valuation</td>
+                        <td id="navValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>Graham Number</td>
+                        <td id="grahamValue">-</td>
+                    </tr>
+                    <tr>
+                        <td>Current Price</td>
+                        <td id="currentPrice">-</td>
+                    </tr>
+                    <tr>
+                        <td>Predicted Price</td>
+                        <td id="predictedPrice">-</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
-
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-            <tr><th>Metric</th><th>Value (LKR)</th><th>Remarks</th></tr>
-        </thead>
-        <tbody>
-            <?php foreach ($valuationData as $row): ?>
-                <tr <?=!empty($row['highlight']) ? 'class="table-success"' : ''?>>
-                    <td><?=$row['metric']?></td>
-                    <td><?=number_format($row['value'], 2)?></td>
-                    <td><?=$row['remarks']?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    new Chart(document.getElementById('valuationChart'), {
-        type: 'bar',
-        data: {
-            labels: <?=json_encode(array_column(array_filter($valuationData, function($item) { 
-                return $item['metric'] !== 'P/B Ratio'; 
-            }), 'metric'))?>,
-            datasets: [{
-                data: <?=json_encode(array_column(array_filter($valuationData, function($item) { 
-                    return $item['metric'] !== 'P/B Ratio'; 
-                }), 'value'))?>,
-                backgroundColor: ['#36a2eb','#ff6384','#ffce56','#4bc0c0'],
-                borderColor: ['#36a2eb','#ff6384','#ffce56','#4bc0c0'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: false } }
-        }
-    });
+const ctx = document.getElementById('valuationChart').getContext('2d');
+let valuationChart;
+
+async function fetchData(url) {
+    try {
+        const res = await fetch(url);
+        return await res.json();
+    } catch (e) {
+        console.error(`Error fetching ${url}:`, e);
+        return null;
+    }
+}
+
+async function loadChartData(company) {
+    document.getElementById('loadingIndicator').style.display = 'inline-block';
+    
+    const [valuations, currentPriceData, predictions] = await Promise.all([
+        fetchData(`http://localhost:8000/backend/api/stock_valuations.php?company=${encodeURIComponent(company)}`),
+        fetchData(`http://localhost:8000/backend/api/stock_prices.php?company=${encodeURIComponent(company)}&limit=1`),
+        fetchData(`http://localhost:8000/backend/api/stock_predictions.php?company=${encodeURIComponent(company)}&limit=1`)
+    ]);
+    
+    // Update table values
+    if (valuations?.success) {
+        document.getElementById('navValue').textContent = valuations.data.nav_valuation?.toFixed(2) || '-';
+        document.getElementById('grahamValue').textContent = valuations.data.graham_valuation?.toFixed(2) || '-';
+    }
+    
+    if (currentPriceData?.success && currentPriceData.data?.length > 0) {
+        document.getElementById('currentPrice').textContent = currentPriceData.data[0].avg_price?.toFixed(2) || '-';
+    }
+    
+    if (predictions?.success && predictions.data?.length > 0) {
+        document.getElementById('predictedPrice').textContent = predictions.data[0].avg_price?.toFixed(2) || '-';
+    }
+    
+    // Prepare data for bar chart
+    const labels = ['NAV', 'Graham Number', 'Current Price', 'Predicted Price'];
+    const values = [
+        valuations?.data?.nav_valuation || 0,
+        valuations?.data?.graham_valuation || 0,
+        currentPriceData?.data?.[0]?.avg_price || 0,
+        predictions?.data?.[0]?.avg_price || 0
+    ];
+    
+    const backgroundColors = [
+        'rgba(54, 162, 235, 0.7)',
+        'rgba(75, 192, 192, 0.7)',
+        'rgba(255, 99, 132, 0.7)',
+        'rgba(153, 102, 255, 0.7)'
+    ];
+    
+    if (!valuationChart) {
+        valuationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Valuation Metrics ($)',
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors.map(c => c.replace('0.7', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Valuation Comparison' },
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => `$${ctx.raw.toFixed(2)}` } }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: false,
+                        title: { display: true, text: 'Value ($)' }
+                    }
+                }
+            }
+        });
+    } else {
+        valuationChart.data.datasets[0].data = values;
+        valuationChart.update();
+    }
+    
+    document.getElementById('loadingIndicator').style.display = 'none';
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    const company = new URLSearchParams(window.location.search).get('company') || '<?= urlencode($companies[0]) ?>';
+    loadChartData(company);
 });
 </script>
 </body>
