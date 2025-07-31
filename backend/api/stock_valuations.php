@@ -14,8 +14,9 @@ try {
 
     // Get and sanitize company parameter
     $companyCode = isset($_GET['company']) ? $conn->real_escape_string(strtoupper($_GET['company'])) : 'TYRE';
+    $stockPricesTable = $companyCode . '_stock_prices';
     
-    // Prepare statement
+    // Prepare statement for valuations
     $stmt = $conn->prepare("
         SELECT 
             `quarter`,
@@ -34,7 +35,7 @@ try {
         throw new Exception("Prepare failed: " . $conn->error);
     }
     
-    // Bind parameters and execute
+    // Bind parameters and execute valuations query
     $stmt->bind_param("s", $companyCode);
     if (!$stmt->execute()) {
         throw new Exception("Execute failed: " . $stmt->error);
@@ -44,33 +45,68 @@ try {
     $data = $result->fetch_assoc();
     
     if ($data) {
+        // Get current stock price
+        $priceStmt = $conn->prepare("
+            SELECT 
+                `trade_date`,
+                `close_price` AS current_price,
+                `volume`
+            FROM `$stockPricesTable`
+            ORDER BY `trade_date` DESC
+            LIMIT 1
+        ");
+        
+        if (!$priceStmt) {
+            throw new Exception("Prepare failed for stock prices: " . $conn->error);
+        }
+        
+        if (!$priceStmt->execute()) {
+            throw new Exception("Execute failed for stock prices: " . $priceStmt->error);
+        }
+        
+        $priceResult = $priceStmt->get_result();
+        $priceData = $priceResult->fetch_assoc();
+        
+        if ($priceData) {
+            // Merge valuation and price data
+            $data['current_price'] = $priceData['current_price'];
+            $data['price_date'] = $priceData['trade_date'];
+            $data['volume'] = $priceData['volume'];
+        }
+        
         // Success response with data
-        echo json_encode([
+        $response = [
             'success' => true,
             'data' => $data,
             'company' => $companyCode,
             'time_generated' => date('Y-m-d H:i:s')
-        ], JSON_NUMERIC_CHECK);
+        ];
+        
+        echo json_encode($response, JSON_NUMERIC_CHECK);
     } else {
         // No data found for company
-        echo json_encode([
+        $response = [
             'success' => false,
             'error' => "No valuation data found for company: $companyCode",
             'company' => $companyCode,
             'time_generated' => date('Y-m-d H:i:s')
-        ]);
+        ];
+        echo json_encode($response);
     }
     
 } catch (Exception $e) {
     // Error response
     http_response_code(500);
-    echo json_encode([
+    $response = [
         'success' => false,
         'error' => $e->getMessage(),
         'company' => isset($companyCode) ? $companyCode : null,
         'time_generated' => date('Y-m-d H:i:s')
-    ]);
+    ];
+    echo json_encode($response);
 } finally {
     if (isset($conn)) $conn->close();
 }
 ?>
+
+{"success":false,"error":"No valuation data found for company: KCAB","company":"KCAB","time_generated":"2025-07-31 17:30:27"}

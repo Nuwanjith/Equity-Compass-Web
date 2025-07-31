@@ -104,9 +104,8 @@ async function fetchData(url) {
 async function loadChartData(company) {
     document.getElementById('loadingIndicator').style.display = 'inline-block';
     
-    const [valuations, currentPriceData, predictions] = await Promise.all([
+    const [valuations, predictions] = await Promise.all([
         fetchData(`http://localhost:8000/backend/api/stock_valuations.php?company=${encodeURIComponent(company)}`),
-        fetchData(`http://localhost:8000/backend/api/stock_prices.php?company=${encodeURIComponent(company)}&limit=1`),
         fetchData(`http://localhost:8000/backend/api/stock_predictions.php?company=${encodeURIComponent(company)}&limit=1`)
     ]);
     
@@ -114,10 +113,7 @@ async function loadChartData(company) {
     if (valuations?.success) {
         document.getElementById('navValue').textContent = valuations.data.nav_valuation?.toFixed(2) || '-';
         document.getElementById('grahamValue').textContent = valuations.data.graham_valuation?.toFixed(2) || '-';
-    }
-    
-    if (currentPriceData?.success && currentPriceData.data?.length > 0) {
-        document.getElementById('currentPrice').textContent = currentPriceData.data[0].avg_price?.toFixed(2) || '-';
+        document.getElementById('currentPrice').textContent = valuations.data.current_price?.toFixed(2) || '-';
     }
     
     if (predictions?.success && predictions.data?.length > 0) {
@@ -129,7 +125,7 @@ async function loadChartData(company) {
     const values = [
         valuations?.data?.nav_valuation || 0,
         valuations?.data?.graham_valuation || 0,
-        currentPriceData?.data?.[0]?.avg_price || 0,
+        valuations?.data?.current_price || 0,
         predictions?.data?.[0]?.avg_price || 0
     ];
     
