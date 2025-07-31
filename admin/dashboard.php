@@ -13,33 +13,34 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
+    $new_username = trim($_POST['username']);  // Form input username
+    $new_password = trim($_POST['password']);  // Form input password
     $email = trim($_POST['email']);
     $is_admin = isset($_POST['is_admin']) ? 1 : 0;
 
-    if (empty($username) || empty($password)) {
+    if (empty($new_username) || empty($new_password)) {
         $error = 'Username and password are required';
     } else {
         try {
-            $conn = new PDO("mysql:host=$servername;dbname=$dbname", $dbusername, $dbpassword);
+            // Use database credentials from db_config.php (root user)
+            $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             // Check if username already exists
             $stmt = $conn->prepare("SELECT id FROM users WHERE username = :username");
-            $stmt->bindParam(':username', $username);
+            $stmt->bindParam(':username', $new_username);
             $stmt->execute();
 
             if ($stmt->fetch()) {
                 $error = 'Username already exists';
             } else {
                 // Hash the password
-                $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
 
                 // Insert new user
                 $stmt = $conn->prepare("INSERT INTO users (username, password_hash, email, is_admin, created_at) 
                                       VALUES (:username, :password_hash, :email, :is_admin, NOW())");
-                $stmt->bindParam(':username', $username);
+                $stmt->bindParam(':username', $new_username);
                 $stmt->bindParam(':password_hash', $password_hash);
                 $stmt->bindParam(':email', $email);
                 $stmt->bindParam(':is_admin', $is_admin, PDO::PARAM_INT);
@@ -59,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
 // Fetch all users for display
 $users = [];
 try {
+    // Use same database credentials from db_config.php
     $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
