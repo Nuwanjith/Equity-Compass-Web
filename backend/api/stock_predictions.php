@@ -50,13 +50,16 @@ try {
     $predictions = [];
     
     while ($row = $result->fetch_assoc()) {
+        $date = DateTime::createFromFormat('Y-m', $row['month']);
+        $date->modify('+1 month');
+
         $predictions[] = [
-            'month' => $row['month'],
+            'month' => $date->format('Y-m'),                // incremented month
             'avg_price' => round($row['avg_price'], 2),
             'volume' => (int)$row['volume'],
             'type' => 'prediction',
-            'sort_key' => $row['sort_key'],
-            'month_display' => $row['month_display']
+            'sort_key' => $date->format('Y-m'),             // also update sort_key if needed
+            'month_display' => $date->format('M Y')         // incremented display value
         ];
     }
     
