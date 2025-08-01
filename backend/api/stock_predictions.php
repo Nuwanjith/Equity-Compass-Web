@@ -32,7 +32,7 @@ try {
         FROM `daily_predictions`
         WHERE `company_code` = ? AND `ensembled_prediction` IS NOT NULL
         GROUP BY DATE_FORMAT(`date`, '%Y-%m'), DATE_FORMAT(`date`, '%b %Y')
-        ORDER BY sort_key ASC
+        ORDER BY sort_key DESC
         LIMIT 12
     ");
     
