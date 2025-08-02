@@ -104,39 +104,45 @@ async function fetchData(url) {
 async function loadChartData(company) {
     document.getElementById('loadingIndicator').style.display = 'inline-block';
     
-    const [valuations, predictions] = await Promise.all([
-        fetchData(`http://localhost:8000/backend/api/stock_valuations.php?company=${encodeURIComponent(company)}`),
-        fetchData(`http://localhost:8000/backend/api/stock_predictions.php?company=${encodeURIComponent(company)}&limit=1`)
-    ]);
-    
-    // Update table values
-    if (valuations?.success) {
-        document.getElementById('navValue').textContent = valuations.data.nav_valuation?.toFixed(2) || '-';
-        document.getElementById('grahamValue').textContent = valuations.data.graham_valuation?.toFixed(2) || '-';
-        document.getElementById('currentPrice').textContent = valuations.data.current_price?.toFixed(2) || '-';
-    }
-    
-    if (predictions?.success && predictions.data?.length > 0) {
-        document.getElementById('predictedPrice').textContent = predictions.data[0].avg_price?.toFixed(2) || '-';
-    }
-    
-    // Prepare data for bar chart
-    const labels = ['NAV', 'Graham Number', 'Current Price', 'Predicted Price'];
-    const values = [
-        valuations?.data?.nav_valuation || 0,
-        valuations?.data?.graham_valuation || 0,
-        valuations?.data?.current_price || 0,
-        predictions?.data?.[0]?.avg_price || 0
-    ];
-    
-    const backgroundColors = [
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(153, 102, 255, 0.7)'
-    ];
-    
-    if (!valuationChart) {
+    try {
+        const [prices, valuations, predictions] = await Promise.all([
+            fetchData(`http://localhost:8000/backend/api/stock_prices.php?company=${encodeURIComponent(company)}`),
+            fetchData(`http://localhost:8000/backend/api/stock_valuations.php?company=${encodeURIComponent(company)}`),
+            fetchData(`http://localhost:8000/backend/api/stock_predictions.php?company=${encodeURIComponent(company)}&limit=1`)
+        ]);
+
+        // Get current price
+        let currentPrice = null;
+        if (prices?.success && prices.data?.length > 0) {
+            const historicalPrices = prices.data.filter(p => p.type === 'historical');
+            if (historicalPrices.length > 0) {
+                currentPrice = historicalPrices[0].avg_price;
+            }
+        }
+
+        // Update table
+        document.getElementById('currentPrice').textContent = currentPrice?.toFixed(2) || '-';
+        document.getElementById('navValue').textContent = valuations?.data?.nav_valuation?.toFixed(2) || '-';
+        document.getElementById('grahamValue').textContent = valuations?.data?.graham_valuation?.toFixed(2) || '-';
+        document.getElementById('predictedPrice').textContent = predictions?.data?.[0]?.avg_price?.toFixed(2) || '-';
+
+        // Prepare chart data
+        const labels = ['NAV', 'Graham Number', 'Current Price', 'Predicted Price'];
+        const values = [
+            valuations?.data?.nav_valuation || 0,
+            valuations?.data?.graham_valuation || 0,
+            currentPrice || 0,
+            predictions?.data?.[0]?.avg_price || 0
+        ];
+
+        console.log('Chart data prepared:', {labels, values}); // Debug log
+
+        // Destroy previous chart if exists
+        if (valuationChart) {
+            valuationChart.destroy();
+        }
+
+        // Create new chart
         valuationChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -144,8 +150,18 @@ async function loadChartData(company) {
                 datasets: [{
                     label: 'Valuation Metrics ($)',
                     data: values,
-                    backgroundColor: backgroundColors,
-                    borderColor: backgroundColors.map(c => c.replace('0.7', '1')),
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(153, 102, 255, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
                     borderWidth: 1
                 }]
             },
@@ -154,7 +170,11 @@ async function loadChartData(company) {
                 plugins: {
                     title: { display: true, text: 'Valuation Comparison' },
                     legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => `$${ctx.raw.toFixed(2)}` } }
+                    tooltip: { 
+                        callbacks: { 
+                            label: ctx => `$${ctx.raw.toFixed(2)}` 
+                        } 
+                    }
                 },
                 scales: {
                     y: { 
@@ -164,12 +184,12 @@ async function loadChartData(company) {
                 }
             }
         });
-    } else {
-        valuationChart.data.datasets[0].data = values;
-        valuationChart.update();
+
+    } catch (error) {
+        console.error('Error loading chart:', error);
+    } finally {
+        document.getElementById('loadingIndicator').style.display = 'none';
     }
-    
-    document.getElementById('loadingIndicator').style.display = 'none';
 }
 
 // Initialize

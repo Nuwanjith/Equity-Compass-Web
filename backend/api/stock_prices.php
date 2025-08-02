@@ -50,15 +50,17 @@ try {
     }
 
     // Query for monthly averages (12 months historical data)
+    // Fixed to be compatible with ONLY_FULL_GROUP_BY
     $sql = "SELECT 
                 DATE_FORMAT(trade_date, '%Y-%m') AS month,
                 DATE_FORMAT(trade_date, '%Y-%m') AS sort_key,
                 AVG(close_price) AS avg_price,
-                SUM(volume) AS total_volume
+                SUM(volume) AS total_volume,
+                MAX(trade_date) AS max_date
             FROM $tableName
             WHERE trade_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
             GROUP BY DATE_FORMAT(trade_date, '%Y-%m')
-            ORDER BY sort_key ASC";
+            ORDER BY max_date DESC";  // Sort by the max date in each month group
 
     $result = $conn->query($sql);
     
@@ -78,57 +80,12 @@ try {
         ];
     }
 
-    // Get prediction value
-    $predictionQuery = "SELECT 
-                        DATE_FORMAT(date, '%Y-%m') AS month,
-                        DATE_FORMAT(date, '%Y-%m') AS sort_key,
-                        ensembled_prediction AS avg_price
-                      FROM Equity_compass_poc.daily_predictions
-                      WHERE company_code = ?
-                      ORDER BY date DESC
-                      LIMIT 1";
-
-    $stmt = $conn->prepare($predictionQuery);
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
-    
-    $stmt->bind_param("s", $companyCode);
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed: " . $stmt->error);
-    }
-    
-    $predictionResult = $stmt->get_result();
-    $predictionData = null;
-    
-    if ($predictionResult && $predictionResult->num_rows > 0) {
-        $predictionRow = $predictionResult->fetch_assoc();
-        $predictionData = [
-            'month' => $predictionRow['month'],
-            'avg_price' => round($predictionRow['avg_price'], 2),
-            'volume' => null,
-            'type' => 'prediction',
-            'sort_key' => $predictionRow['sort_key']
-        ];
-    }
-
-    // Combine all data
-    $allData = $historicalData;
-    if ($predictionData) {
-        $allData[] = $predictionData;
-    }
-
-    // Sort all data chronologically
-    usort($allData, function($a, $b) {
-        return strcmp($a['sort_key'], $b['sort_key']);
-    });
-
     // Format month display (e.g., "May 2025" instead of "2025-05")
     $formattedData = array_map(function($item) {
         $date = DateTime::createFromFormat('Y-m', $item['month']);
         $item['month_display'] = $date->format('M Y'); // e.g., "Jun 2025"
         return $item;
-    }, $allData);
+    }, $historicalData);
 
     // Successful response
     echo json_encode([
