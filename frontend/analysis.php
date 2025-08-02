@@ -61,7 +61,7 @@ $selectedCompany = $_GET['company'] ?? $companies[0];
                 <thead>
                     <tr>
                         <th>Metric</th>
-                        <th>Value ($)</th>
+                        <th>Value (LKR)</th>
                     </tr>
                 </thead>
                 <tbody id="valuationTableBody">
@@ -148,7 +148,7 @@ async function loadChartData(company) {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Valuation Metrics ($)',
+                    label: 'Valuation Metrics (LKR)',
                     data: values,
                     backgroundColor: [
                         'rgba(54, 162, 235, 0.7)',
@@ -172,14 +172,14 @@ async function loadChartData(company) {
                     legend: { display: false },
                     tooltip: { 
                         callbacks: { 
-                            label: ctx => `$${ctx.raw.toFixed(2)}` 
+                            label: ctx => `LKR ${ctx.raw.toFixed(2)}`
                         } 
                     }
                 },
                 scales: {
                     y: { 
                         beginAtZero: false,
-                        title: { display: true, text: 'Value ($)' }
+                        title: { display: true, text: 'Value (LKR)' }
                     }
                 }
             }
