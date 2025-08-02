@@ -122,7 +122,7 @@ async function loadChartData(company) {
                     tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw?.toFixed(2) || 'N/A'}` } }
                 },
                 scales: {
-                    y: { title: { display: true, text: 'Price ($)' } },
+                    y: { title: { display: true, text: 'Price (LKR)' } },
                     x: { title: { display: true, text: 'Month' } }
                 }
             }
