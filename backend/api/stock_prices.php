@@ -34,36 +34,34 @@ try {
     // Get company code from query parameter
     $companyCode = isset($_GET['company']) ? strtoupper($_GET['company']) : 'TYRE';
     
-    // Validate company code
-    $validCompanies = ['KCAB', 'TYRE', 'SAMP'];
+    // Validate company code (tickers with trained models / imported price history)
+    $validCompanies = ['CARG', 'COMB', 'CTC', 'DIPD', 'HAYC', 'HAYL', 'KCAB', 'KVAL', 'MELS', 'SAMP', 'TYRE'];
     if (!in_array($companyCode, $validCompanies)) {
-        throw new Exception("Invalid company code. Allowed values: KCAB, TYRE, SAMP");
+        throw new Exception("Invalid company code. Allowed values: " . implode(', ', $validCompanies));
     }
 
-    // Determine table name based on company code
-    $tableName = $companyCode . '_stock_prices';
-
-    // Check if table exists
-    $checkTable = $conn->query("SHOW TABLES LIKE '$tableName'");
-    if ($checkTable->num_rows == 0) {
-        throw new Exception("Table not found for company code: $companyCode");
-    }
-
-    // Query for monthly averages (12 months historical data)
+    // Query for monthly averages (12 months historical data) from raw_stock_prices
     // Fixed to be compatible with ONLY_FULL_GROUP_BY
     $sql = "SELECT 
                 DATE_FORMAT(trade_date, '%Y-%m') AS month,
                 DATE_FORMAT(trade_date, '%Y-%m') AS sort_key,
                 AVG(close_price) AS avg_price,
-                SUM(volume) AS total_volume,
+                SUM(share_volume) AS total_volume,
                 MAX(trade_date) AS max_date
-            FROM $tableName
-            WHERE trade_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
+            FROM raw_stock_prices
+            WHERE ticker = ?
+              AND trade_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
             GROUP BY DATE_FORMAT(trade_date, '%Y-%m')
             ORDER BY max_date DESC";  // Sort by the max date in each month group
 
-    $result = $conn->query($sql);
-    
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Query prepare failed: " . $conn->error);
+    }
+    $stmt->bind_param('s', $companyCode);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
     if (!$result) {
         throw new Exception("Query failed: " . $conn->error);
     }
@@ -104,6 +102,9 @@ try {
         'time_generated' => date('Y-m-d H:i:s')
     ]);
 } finally {
+    if (isset($stmt) && $stmt instanceof mysqli_stmt) {
+        $stmt->close();
+    }
     if (isset($conn)) {
         $conn->close();
     }

@@ -15,23 +15,26 @@ try {
     // Get and sanitize company parameter
     $companyCode = isset($_GET['company']) ? $conn->real_escape_string(strtoupper($_GET['company'])) : 'TYRE';
     
-    // Validate company code
-    $validCompanies = ['KCAB', 'TYRE', 'SAMP'];
+    // Validate company code (tickers with a trained xgboost_meta ensemble model)
+    $validCompanies = ['DIPD', 'TYRE'];
     if (!in_array($companyCode, $validCompanies)) {
-        throw new Exception("Invalid company code. Allowed values: KCAB, TYRE, SAMP");
+        throw new Exception("Invalid company code. Allowed values: " . implode(', ', $validCompanies));
     }
 
-    // Prepare statement to get predictions grouped by month
+    // Prepare statement to get predictions grouped by month.
+    // Final ensemble model is `xgboost_meta` (model_runs.model_type); its
+    // per-day forecasts live in `predictions`, keyed by run_id.
     $stmt = $conn->prepare("
-        SELECT 
-            DATE_FORMAT(`date`, '%Y-%m') AS month,
-            AVG(`ensembled_prediction`) AS avg_price,
+        SELECT
+            DATE_FORMAT(p.`target_date`, '%Y-%m') AS month,
+            AVG(p.`predicted_price`) AS avg_price,
             COUNT(*) AS volume,
-            DATE_FORMAT(`date`, '%Y-%m') AS sort_key,
-            DATE_FORMAT(`date`, '%b %Y') AS month_display
-        FROM `daily_predictions`
-        WHERE `company_code` = ? AND `ensembled_prediction` IS NOT NULL
-        GROUP BY DATE_FORMAT(`date`, '%Y-%m'), DATE_FORMAT(`date`, '%b %Y')
+            DATE_FORMAT(p.`target_date`, '%Y-%m') AS sort_key,
+            DATE_FORMAT(p.`target_date`, '%b %Y') AS month_display
+        FROM `predictions` p
+        JOIN `model_runs` mr ON mr.`run_id` = p.`run_id`
+        WHERE mr.`ticker` = ? AND mr.`model_type` = 'xgboost_meta'
+        GROUP BY DATE_FORMAT(p.`target_date`, '%Y-%m'), DATE_FORMAT(p.`target_date`, '%b %Y')
         ORDER BY sort_key DESC
         LIMIT 12
     ");
@@ -50,16 +53,15 @@ try {
     $predictions = [];
     
     while ($row = $result->fetch_assoc()) {
-        $date = DateTime::createFromFormat('Y-m', $row['month']);
-        $date->modify('+1 month');
-
+        // `target_date` is already the actual future date the prediction is
+        // forecasting (predicted_at + 30 days), so no shifting needed here.
         $predictions[] = [
-            'month' => $date->format('Y-m'),                // incremented month
+            'month' => $row['month'],
             'avg_price' => round($row['avg_price'], 2),
             'volume' => (int)$row['volume'],
             'type' => 'prediction',
-            'sort_key' => $date->format('Y-m'),             // also update sort_key if needed
-            'month_display' => $date->format('M Y')         // incremented display value
+            'sort_key' => $row['sort_key'],
+            'month_display' => $row['month_display']
         ];
     }
     

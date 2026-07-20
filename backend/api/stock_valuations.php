@@ -15,17 +15,19 @@ try {
     // Get and sanitize company parameter
     $companyCode = isset($_GET['company']) ? $conn->real_escape_string(strtoupper($_GET['company'])) : 'TYRE';
     
-    // Prepare statement
+    // Prepare statement. `valuations` is populated by
+    // scripts/compute_valuations.py (Equity-compass-2026) from the latest
+    // reported quarterly fundamentals (NAV/share, TTM EPS).
     $stmt = $conn->prepare("
         SELECT 
             `quarter`,
-            `company`,
-            `NAV-Based-valuation` AS nav_valuation,
-            `EPS-Based-valuation` AS eps_valuation,
-            `Graham-Number-valuation` AS graham_valuation,
+            `ticker` AS `company`,
+            `nav_valuation`,
+            `eps_valuation`,
+            `graham_valuation`,
             `created_at`
         FROM `valuations`
-        WHERE `company` = ?
+        WHERE `ticker` = ?
         ORDER BY `created_at` DESC
         LIMIT 1
     ");

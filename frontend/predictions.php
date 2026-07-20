@@ -1,6 +1,7 @@
 <?php
 include(__DIR__ . '/../backend/includes/auth.php');
-$companies = ["TYRE", "SAMP", "KCAB", "DIPD"];
+// Only tickers with a trained xgboost_meta ensemble model have prediction data.
+$companies = ["TYRE", "DIPD"];
 $selectedCompany = $_GET['company'] ?? $companies[0];
 ?>
 <!DOCTYPE html>

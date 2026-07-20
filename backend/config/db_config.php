@@ -2,5 +2,5 @@
 $servername = "localhost";
 $username = "root";
 $password = "root53421";
-$dbname = "Equity_compass_poc";
+$dbname = "equity_compass";
 ?>

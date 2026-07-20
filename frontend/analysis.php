@@ -1,6 +1,7 @@
 <?php
 include(__DIR__ . '/../backend/includes/auth.php');
-$companies = ["TYRE", "SAMP", "KCAB", "DIPD"];
+// Only tickers with trained valuation + prediction data (fundamentals + xgboost_meta).
+$companies = ["TYRE", "DIPD"];
 $selectedCompany = $_GET['company'] ?? $companies[0];
 ?>
 <!DOCTYPE html>

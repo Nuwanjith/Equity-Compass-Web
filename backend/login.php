@@ -7,8 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input_password = $_POST['password'] ?? '';
     
     try {
-        // Connect using privileged credentials from db_config
-        $conn = new PDO("mysql:host=$servername;dbname=$dbname", $dbusername, $dbpassword);
+        // Connect using credentials from db_config
+        $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         
         // Check against users table
